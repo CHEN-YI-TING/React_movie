@@ -1,54 +1,52 @@
 import "./App.css";
 import React, { useState, useEffect } from "react";
-import Header from "../Header/Header";
-import SearchBar from "../SearchBar/SearchBar";
-import SearchHistory from "../SearchHistory/SearchHistory";
-import SearchResult from "../SearchResult/SearchResult";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import Layout from "../Layout/Layout";
+import Home from "../Home/Home";
+import Films from "../Films/Films";
+import Person from "../Person/Person";
+import People from "../People/People";
+import Planets from "../Planets/Planets";
 
 export default function App() {
   const name = "公司名稱";
   const [historyText, setHistoryText] = useState([]);
-  const [results, setResults] = useState([]);
-  const [dataType, setDataType] = useState("films");
 
   function addText(newText) {
     let newTerms = new Set([newText, ...historyText]);
     setHistoryText(Array.from(newTerms));
-    // fetchData(newText);
   }
+  const [people, setPeople] = useState([]);
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    fetchData(historyText[0]);
-    return () => {
-      //clean up function
-    };
-  }, [historyText]);
+    (async function () {
+      if (pathname.indexOf("people") > -1) {
+        let res = await fetch("https://swapi.dev/api/people");
+        let data = await res.json();
+        console.log("Fetched the people. Updating people state");
+        setPeople(data.results);
+      }
+    })();
+  }, [pathname]);
 
-  useEffect(() => {
-    console.log("第一次渲染");
-    fetchData();
-  }, []);
-
-  async function fetchData(keyword) {
-    let url = `https://swapi.dev/api/${dataType}`;
-    if (keyword) {
-      url += `/?search=${keyword}`;
-    }
-    let response = await fetch(url);
-    if (!response.ok) throw new Error(response.statusText);
-    let data = await response.json();
-    setResults(data.results);
-  }
   return (
-    <div className="App">
-      <Header name={name} />
-      <SearchBar text={historyText[0]} addText={addText} />
-      <main className="content">
-        <SearchHistory historyText={historyText} />
-        <SearchResult results={results} type={dataType} />
-      </main>
-    </div>
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <Layout addText={addText} historyText={historyText} name={name} />
+        }
+      >
+        <Route index element={<Home />} />
+        <Route path="films/*" element={<Films />} />
+        <Route path="people">
+          <Route index element={<People list={people} />} />
+          <Route path=":id" element={<Person list={people} />} />
+        </Route>
+
+        <Route path="planets/*" element={<Planets />} />
+      </Route>
+    </Routes>
   );
 }
-
-//export default App;
